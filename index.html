@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Un metro di Distanza</title>
+    <!-- Google Fonts per un look moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <!-- Icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Rimuoviamo il vecchio overlay di sfondo -->
+    <!-- <div class="background-overlay"></div> -->
+
+    <div class="container">
+        <!-- Header del Blog -->
+        <header class="glass-panel main-header">
+            <div class="header-logo">
+                <img src="sfondo.jpg" alt="Leica Camera Logo" class="leica-logo">
+            </div>
+            <div class="header-text">
+                <h1>A un metro di distanza</h1>
+                <h2>Reportage in bianco e nero sulla presenza umana</h2>
+            </div>
+        </header>
+
+        <!-- Sezione Chi sono -->
+        <section class="glass-panel about-section">
+            <h3>Chi sono</h3>
+            <p>Mi chiamo Luciano e sono un appassionato di fotografia. Mi piace raccontare storie attraverso il bianco e nero, cercando di
+                catturare l'essenza della presenza umana nel mondo che ci circonda.</p>
+        </section>
+
+        <!-- Container principale per i Reportage (verranno generati dinamicamente qui) -->
+        <main id="reportage-container">
+            <!-- Esempio strutturale (verrà gestito via JS) -->
+            <!--
+            <article class="glass-panel reportage-post">
+                <div class="reportage-image">
+                    <img src="path/to/image" alt="Reportage">
+                </div>
+                <div class="reportage-content">
+                    <h4 class="reportage-title">Titolo (opzionale)</h4>
+                    <p class="reportage-desc">Descrizione...</p>
+                    <p class="reportage-meta"><i class="fas fa-calendar-alt"></i> Data <i class="fas fa-map-marker-alt"></i> Luogo, Evento</p>
+                </div>
+                
+                <div class="comments-section">
+                    <h5>Commenti</h5>
+                    <div class="comments-list">...</div>
+                    <form class="comment-form">
+                        <input type="text" placeholder="Nome" required>
+                        <input type="email" placeholder="Email" required>
+                        <textarea placeholder="Scrivi commento..." required></textarea>
+                        <button type="submit">Aggiungi Commento</button>
+                    </form>
+                </div>
+            </article>
+            -->
+        </main>
+    </div>
+
+    <!-- Pulsante gestione nel footer -->
+    <div style="text-align: center; margin-top: 60px; padding-bottom: 40px; border-top: 1px solid #eee;">
+        <button id="btn-manage"
+            style="background:rgba(0,0,0,0.05); border:1px solid #ccc; color:#666; padding: 10px 20px; border-radius: 30px; cursor:pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s ease;"
+            title="Gestione">
+            <i class="fas fa-cog"></i>
+            <span>Pannello Gestione</span>
+        </button>
+        <p style="font-size: 0.8rem; color: #999; margin-top: 10px;">&copy; 2026 Diario di un fotoreporter</p>
+    </div>
+
+    <!-- Bottone fisso per aggiungere un nuovo reportage (Nascosto di default) -->
+    <button id="btn-add-reportage" class="floating-action-button hidden" title="Aggiungi Reportage">
+        <i class="fas fa-plus"></i> Aggiungi Reportage
+    </button>
+
+    <!-- Modale per l'aggiunta di un nuovo reportage -->
+    <div id="modal-add-reportage" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <span class="close-modal">&times;</span>
+            <h2>Nuovo Reportage</h2>
+            <form id="form-add-reportage">
+                <!-- Immagini -->
+                <div class="form-group">
+                    <label for="rep-images">Foto (Puoi selezionare più file)</label>
+                    <input type="file" id="rep-images" accept="image/*" multiple required>
+                    <div id="image-preview" class="image-preview-area">
+                        <span>Nessuna foto selezionata</span>
+                    </div>
+                </div>
+
+                <!-- Descrizione -->
+                <div class="form-group">
+                    <label for="rep-desc">Descrizione</label>
+                    <textarea id="rep-desc" rows="4" placeholder="Inserisci la descrizione del reportage..."
+                        required></textarea>
+                </div>
+
+                <!-- Meta Info -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rep-date">Data</label>
+                        <input type="date" id="rep-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rep-location">Luogo e Evento</label>
+                        <input type="text" id="rep-location" placeholder="Es. Roma, Manifestazione" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Aggiungi</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Gestione -->
+    <div id="modal-manage" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 360px; text-align: center;">
+            <span class="close-admin-modal"
+                style="float: right; cursor: pointer; font-size: 1.5rem; line-height: 1;">&times;</span>
+            <h3 style="margin-bottom: 20px; color: #333;"><i class="fas fa-cog" style="margin-right: 8px;"></i>Gestione
+            </h3>
+            <input type="password" id="key-input" placeholder="Chiave di accesso"
+                style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 1rem; box-sizing: border-box;">
+            <button id="btn-manage-submit" class="submit-btn" style="width: 100%;">Entra</button>
+        </div>
+    </div>
+
+    <!-- Firebase compat SDK (funziona even con doppio clic su file) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
