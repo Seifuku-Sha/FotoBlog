@@ -1,4 +1,4 @@
-   const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyAlMRkoZGtHbm7fEX4a9V33nlMTZv-oY5s",
     authDomain: "fotoblog-7fa65.firebaseapp.com",
     projectId: "fotoblog-7fa65",
@@ -420,6 +420,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── START ───────────────────────────────────────────────────────────────
     loadReportages();
 });
-
-
-
