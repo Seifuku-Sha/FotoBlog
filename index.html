@@ -36,7 +36,8 @@
         <!-- Sezione Chi sono -->
         <section class="glass-panel about-section">
             <h3>Chi sono</h3>
-            <p>Mi chiamo Luciano e sono un appassionato di fotografia. Mi piace raccontare storie attraverso il bianco e nero, cercando di
+            <p>Mi chiamo Luciano e sono un appassionato di fotografia. Mi piace raccontare storie attraverso il bianco e
+                nero, cercando di
                 catturare l'essenza della presenza umana nel mondo che ci circonda.</p>
         </section>
 
@@ -134,6 +135,14 @@
             <input type="password" id="key-input" placeholder="Chiave di accesso"
                 style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 1rem; box-sizing: border-box;">
             <button id="btn-manage-submit" class="submit-btn" style="width: 100%;">Entra</button>
+        </div>
+    </div>
+
+    <!-- Modale Lightbox per lo Zoom delle foto -->
+    <div id="modal-lightbox" class="modal-overlay hidden">
+        <div class="lightbox-container">
+            <span class="close-lightbox">&times;</span>
+            <img id="lightbox-img" src="" alt="Zoom Foto">
         </div>
     </div>
 

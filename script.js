@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeAdminModalBtn = document.querySelector('.close-admin-modal');
     const keyInput = document.getElementById('key-input');
     const btnManageSubmit = document.getElementById('btn-manage-submit');
+    const modalLightbox = document.getElementById('modal-lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const closeLightboxBtn = document.querySelector('.close-lightbox');
 
     let currentImagesBase64 = [];
     let reportages = [];
@@ -322,6 +325,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnCloseModal.addEventListener('click', closeModal);
     modalAdd.addEventListener('click', function (e) { if (e.target === modalAdd) closeModal(); });
+
+    // ─── LOGICA LIGHTBOX (ZOOM) ──────────────────────────────────────────────
+    reportageContainer.addEventListener('click', function (e) {
+        if (e.target.tagName === 'IMG' && e.target.closest('.reportage-images')) {
+            const src = e.target.src;
+            lightboxImg.src = src;
+            modalLightbox.classList.remove('hidden');
+            modalLightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    });
+
+    function closeLightbox() {
+        modalLightbox.classList.remove('active');
+        modalLightbox.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    closeLightboxBtn.addEventListener('click', closeLightbox);
+    modalLightbox.addEventListener('click', function (e) {
+        if (e.target === modalLightbox || e.target.classList.contains('lightbox-container')) {
+            closeLightbox();
+        }
+    });
 
     // ─── ANTEPRIMA FOTO ───────────────────────────────────────────────────────
     imagesInput.addEventListener('change', async function () {
