@@ -475,11 +475,53 @@ body {
     cursor: pointer;
     z-index: 1001;
     transition: color 0.2s;
-    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .close-lightbox:hover {
     color: var(--accent);
+}
+
+.nav-lightbox {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 4rem;
+    color: white;
+    cursor: pointer;
+    z-index: 1001;
+    user-select: none;
+    padding: 20px;
+    transition: color 0.2s, transform 0.2s;
+    text-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.nav-lightbox:hover {
+    color: var(--accent);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.prev-lightbox {
+    left: 20px;
+}
+
+.next-lightbox {
+    right: 20px;
+}
+
+@media (max-width: 768px) {
+    .nav-lightbox {
+        font-size: 3rem;
+        padding: 10px;
+    }
+
+    .prev-lightbox {
+        left: 5px;
+    }
+
+    .next-lightbox {
+        right: 5px;
+    }
 }
 
 @media (max-width: 600px) {

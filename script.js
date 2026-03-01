@@ -41,9 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalLightbox = document.getElementById('modal-lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     const closeLightboxBtn = document.querySelector('.close-lightbox');
+    const prevLightboxBtn = document.querySelector('.prev-lightbox');
+    const nextLightboxBtn = document.querySelector('.next-lightbox');
 
     let currentImagesBase64 = [];
     let reportages = [];
+    let currentLightboxImages = []; // Lista immagini del reportage aperto
+    let currentLightboxIndex = 0;   // Indice immagine corrente
     let isAdmin = false;
 
     // --- FALLBACK LOCALE ---
@@ -326,16 +330,33 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseModal.addEventListener('click', closeModal);
     modalAdd.addEventListener('click', function (e) { if (e.target === modalAdd) closeModal(); });
 
-    // ─── LOGICA LIGHTBOX (ZOOM) ──────────────────────────────────────────────
+    // ─── LOGICA LIGHTBOX (ZOOM CON NAVIGAZIONE) ──────────────────────────────
     reportageContainer.addEventListener('click', function (e) {
         if (e.target.tagName === 'IMG' && e.target.closest('.reportage-images')) {
-            const src = e.target.src;
-            lightboxImg.src = src;
+            const container = e.target.closest('.reportage-images');
+            currentLightboxImages = Array.from(container.querySelectorAll('img')).map(img => img.src);
+            currentLightboxIndex = currentLightboxImages.indexOf(e.target.src);
+
+            showLightboxImage();
             modalLightbox.classList.remove('hidden');
             modalLightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
     });
+
+    function showLightboxImage() {
+        lightboxImg.src = currentLightboxImages[currentLightboxIndex];
+    }
+
+    function nextImage() {
+        currentLightboxIndex = (currentLightboxIndex + 1) % currentLightboxImages.length;
+        showLightboxImage();
+    }
+
+    function prevImage() {
+        currentLightboxIndex = (currentLightboxIndex - 1 + currentLightboxImages.length) % currentLightboxImages.length;
+        showLightboxImage();
+    }
 
     function closeLightbox() {
         modalLightbox.classList.remove('active');
@@ -344,6 +365,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeLightboxBtn.addEventListener('click', closeLightbox);
+    nextLightboxBtn.addEventListener('click', (e) => { e.stopPropagation(); nextImage(); });
+    prevLightboxBtn.addEventListener('click', (e) => { e.stopPropagation(); prevImage(); });
+
+    // Navigazione da tastiera
+    document.addEventListener('keydown', function (e) {
+        if (!modalLightbox.classList.contains('active')) return;
+        if (e.key === 'ArrowRight') nextImage();
+        if (e.key === 'ArrowLeft') prevImage();
+        if (e.key === 'Escape') closeLightbox();
+    });
+
     modalLightbox.addEventListener('click', function (e) {
         if (e.target === modalLightbox || e.target.classList.contains('lightbox-container')) {
             closeLightbox();
