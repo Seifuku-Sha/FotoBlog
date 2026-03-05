@@ -476,6 +476,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ─── PROTEZIONE IMMAGINI ────────────────────────────────────────────────
+    // Impedisce il tasto destro sulle immagini (sia nei reportage che nel lightbox)
+    document.addEventListener('contextmenu', function (e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Blocca scorciatoie comuni per salvataggio o ispezione base
+    document.addEventListener('keydown', function (e) {
+        // Ctrl+S (Salva con nome)
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+        }
+        // Ctrl+U (Visualizza sorgente) - Deterrente minore
+        if (e.ctrlKey && e.key === 'u') {
+            e.preventDefault();
+        }
+    });
+
     // ─── START ───────────────────────────────────────────────────────────────
     loadReportages();
 });
