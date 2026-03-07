@@ -11,6 +11,7 @@ try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         window.db = firebase.firestore();
+        window.storage = firebase.storage();
         console.log("Firebase inizializzato correttamente.");
     } else {
         console.warn("Firebase SDK non caricato. Controllo connessione internet o protocollo file://");
@@ -131,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─── COMPRESSIONE IMMAGINE ───────────────────────────────────────────────
     function shrinkImage(base64Str, quality, maxDim) {
-        quality = quality || 0.6;
-        maxDim = maxDim || 1200;
+        quality = quality || 0.8;
+        maxDim = maxDim || 1920;
         return new Promise(function (resolve) {
             var img = new Image();
             img.onload = function () {
@@ -298,11 +299,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── ELIMINA ─────────────────────────────────────────────────────────────
     function attachDeleteListeners() {
         document.querySelectorAll('.btn-delete').forEach(function (btn) {
-            btn.addEventListener('click', function () {
+            btn.addEventListener('click', async function () {
                 var docId = btn.getAttribute('data-id');
                 if (confirm("Sei sicuro di voler eliminare questo reportage?")) {
-                    window.db.collection("reportages").doc(docId).delete()
-                        .catch(function (err) { console.error(err); });
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminazione...';
+                    try {
+                        // Trova il reportage per eliminare anche le immagini da Storage se possibile
+                        var rep = reportages.find(r => r.id === docId);
+                        if (rep && rep.images && rep.images.length > 0) {
+                            for (let url of rep.images) {
+                                if (typeof url === 'string' && url.includes('firebasestorage')) {
+                                    try {
+                                        var ref = window.storage.refFromURL(url);
+                                        await ref.delete();
+                                    } catch (err) {
+                                        console.warn("Impossibile eliminare l'immagine da storage:", url, err);
+                                    }
+                                }
+                            }
+                        }
+                        await window.db.collection("reportages").doc(docId).delete();
+                    } catch (err) {
+                        console.error("Errore durante l'eliminazione:", err);
+                        alert("Errore durante l'eliminazione: " + err.message);
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-trash"></i> Elimina reportage';
+                    }
                 }
             });
         });
@@ -412,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ─── SALVA REPORTAGE ─────────────────────────────────────────────────────
-    formAddReportage.addEventListener('submit', function (e) {
+    formAddReportage.addEventListener('submit', async function (e) {
         e.preventDefault();
         if (!currentImagesBase64.length) {
             alert("Seleziona almeno una foto prima di continuare.");
@@ -423,57 +446,79 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio...';
 
-        // Calcolo approssimativo della dimensione (Firestore ha limite 1MB per documento)
-        var totalSize = JSON.stringify(currentImagesBase64).length;
-        console.log("Dimensione stimata post:", Math.round(totalSize / 1024), "KB");
-
-        if (totalSize > 950000) { // Un po' meno di 1MB per sicurezza
-            alert("Errore: Il reportage \u00e8 troppo pesante (troppe foto o troppo grandi).\n\nProva a caricare meno foto o foto pi\u00f9 piccole.");
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
-            return;
-        }
-
-        if (typeof firebase === 'undefined' || !window.db) {
+        if (typeof firebase === 'undefined' || !window.db || !window.storage) {
             alert("Errore: Il database non \u00e8 inizializzato. Controlla la connessione.");
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
             return;
         }
 
-        // Timeout di 15 secondi per evitare il caricamento infinito
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout: Il database non risponde. Controlla le regole Firestore.")), 15000)
-        );
+        try {
+            // Data e identificativo cartella per Firebase Storage
+            const timestamp = Date.now();
+            const reportageId = `rep_${timestamp}`;
+            const uploadedImageUrls = [];
 
-        Promise.race([
-            window.db.collection("reportages").add({
-                images: currentImagesBase64,
-                desc: document.getElementById('rep-desc').value,
-                date: document.getElementById('rep-date').value,
-                location: document.getElementById('rep-location').value,
-                comments: [],
-                timestamp: Date.now()
-            }),
-            timeoutPromise
-        ]).then(function () {
+            // Timeout complessivo per l'operazione (aumentato a 60 secondi perché il caricamento immagini può essere lungo)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout: Operazione troppo lunga. Riprova con meno foto o controlla la connessione internet.")), 60000)
+            );
+
+            const uploadPromise = async () => {
+                // 1. Carica le immagini su Storage e ottieni gli URL pubblici
+                for (let i = 0; i < currentImagesBase64.length; i++) {
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
+                    const base64Str = currentImagesBase64[i];
+
+                    // Separa l'intestazione data:image/... base64 dai dati effettivi
+                    const base64Data = base64Str.split(',')[1];
+                    const contentTypeMatch = base64Str.match(/data:([^;]+);/);
+                    const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
+
+                    const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
+
+                    // Carica su Firebase Storage in formato base64
+                    const snapshot = await imageRef.putString(base64Data, 'base64', { contentType: contentType });
+                    const downloadURL = await snapshot.ref.getDownloadURL();
+                    uploadedImageUrls.push(downloadURL);
+                }
+
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati reportage...';
+
+                // 2. Salva il documento su Firestore, registrando solo gli URL delle immagini (risolve il limite del MegaByte!)
+                await window.db.collection("reportages").add({
+                    images: uploadedImageUrls,
+                    desc: document.getElementById('rep-desc').value,
+                    date: document.getElementById('rep-date').value,
+                    location: document.getElementById('rep-location').value,
+                    comments: [],
+                    timestamp: timestamp
+                });
+            };
+
+            await Promise.race([uploadPromise(), timeoutPromise]);
+
             console.log("Salvataggio completato con successo.");
             closeModal();
             alert("Reportage pubblicato con successo!");
-        }).catch(function (err) {
-            console.error("Errore salvataggio Firestore:", err);
+
+        } catch (err) {
+            console.error("Errore salvataggio:", err);
             var errorMsg = "Errore durante il salvataggio.";
             if (err.message.includes("Timeout")) {
-                errorMsg = "Il salvataggio sta impiegando troppo tempo.\n\n1. Controlla la connessione internet.\n2. Verifica di aver pubblicato le REGOLE su Firebase (allow read, write: if true).\n3. Prova a caricare meno foto.";
-            } else if (err.code === 'permission-denied') {
-                errorMsg += "\n\nAssicurati di aver impostato le REGOLE di Firestore su 'true' nella console di Firebase.";
+                errorMsg = err.message;
+            } else if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
+                errorMsg += "\n\nPermesso negato. Assicurati di aver impostato le REGOLE DI STORAGE (e Firestore) su 'allow read, write: if true;' nella console di Firebase come indicato nelle istruzioni.";
             } else {
-                errorMsg += "\n\n" + err.message;
+                errorMsg += "\n\n" + (err.message || "Errore sconosciuto.");
             }
             alert(errorMsg);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
-        });
+        } finally {
+            if (modalAdd.classList.contains('active')) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
+            }
+        }
     });
 
     // ─── PROTEZIONE IMMAGINI ────────────────────────────────────────────────
