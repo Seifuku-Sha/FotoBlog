@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─── COMPRESSIONE IMMAGINE ───────────────────────────────────────────────
     function shrinkImage(base64Str, quality, maxDim) {
-        quality = quality || 0.7;
-        maxDim = maxDim || 1200;
+        quality = quality || 0.6;
+        maxDim = maxDim || 1000;
         return new Promise(function (resolve) {
             var img = new Image();
             img.onload = function () {
@@ -466,22 +466,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Funzione di utilità per caricare una singola immagine con ricaricamento (retry)
             const uploadWithRetry = async (base64Str, imageRef, index, retries = 2) => {
-                const base64Data = base64Str.split(',')[1];
-                const contentTypeMatch = base64Str.match(/data:([^;]+);/);
-                const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
-
                 for (let i = 0; i <= retries; i++) {
                     try {
                         console.log(`[Upload Foto ${index + 1}] Avvio tentativo ${i + 1}/${retries + 1}`);
-                        const snapshot = await imageRef.putString(base64Data, 'base64', { contentType: contentType });
-                        console.log(`[Upload Foto ${index + 1}] putString completato. Recupero URL...`);
+
+                        // Utilizziamo 'data_url' che è lo standard per le stringhe Base64 dei canvas
+                        const snapshot = await imageRef.putString(base64Str, 'data_url');
+
+                        console.log(`[Upload Foto ${index + 1}] Successo. Recupero URL...`);
                         const downloadURL = await snapshot.ref.getDownloadURL();
-                        console.log(`[Upload Foto ${index + 1}] Successo! URL: ${downloadURL.substring(0, 30)}...`);
                         return downloadURL;
                     } catch (err) {
                         console.error(`[Upload Foto ${index + 1}] Errore tentativo ${i + 1}:`, err);
                         if (i === retries) throw err;
-                        await new Promise(r => setTimeout(r, 2000)); // Attendi 2 sec prima di riprovare
+                        await new Promise(r => setTimeout(r, 2000));
                     }
                 }
             };
@@ -489,22 +487,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const uploadPromise = async () => {
                 btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento di ${currentImagesBase64.length} foto in corso...`;
 
-                // Eseguiamo i caricamenti in BLOCCHI (batch) di 2 alla volta
-                // per evitare di intasare la rete del browser con 9 richieste pesanti simultanee 
-                const concurrencyLimit = 2;
+                // Carichiamo le foto 1 alla volta (sequenziale)
+                // È il metodo più lento ma il più STABILE in assoluto per grandi quantità di file
+                for (let i = 0; i < currentImagesBase64.length; i++) {
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
 
-                for (let i = 0; i < currentImagesBase64.length; i += concurrencyLimit) {
-                    const batch = currentImagesBase64.slice(i, i + concurrencyLimit);
-                    const batchPromises = batch.map((base64Str, batchIndex) => {
-                        const actualIndex = i + batchIndex;
-                        const imageRef = window.storage.ref(`reportages/${reportageId}/img_${actualIndex}.jpg`);
-                        return uploadWithRetry(base64Str, imageRef, actualIndex);
-                    });
-
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Elaborazione foto ${i + 1} - ${Math.min(i + concurrencyLimit, currentImagesBase64.length)} di ${currentImagesBase64.length}...`;
-
-                    const batchUrls = await Promise.all(batchPromises);
-                    uploadedImageUrls.push(...batchUrls);
+                    const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
+                    const downloadURL = await uploadWithRetry(currentImagesBase64[i], imageRef, i);
+                    uploadedImageUrls.push(downloadURL);
                 }
 
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati reportage...';
