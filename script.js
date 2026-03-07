@@ -468,18 +468,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const uploadWithRetry = async (base64Str, imageRef, index, retries = 2) => {
                 for (let i = 0; i <= retries; i++) {
                     try {
-                        console.log(`[Upload Foto ${index + 1}] Avvio tentativo ${i + 1}/${retries + 1}`);
+                        // 1. Convertiamo la stringa Base64 in un "Blob" (un vero file temporaneo)
+                        // Questo è molto più leggero per la memoria del browser
+                        const response = await fetch(base64Str);
+                        const blob = await response.blob();
 
-                        // Utilizziamo 'data_url' che è lo standard per le stringhe Base64 dei canvas
-                        const snapshot = await imageRef.putString(base64Str, 'data_url');
+                        console.log(`[Upload Foto ${index + 1}] Tentativo ${i + 1}/${retries + 1} - Invio file binario...`);
 
-                        console.log(`[Upload Foto ${index + 1}] Successo. Recupero URL...`);
+                        // 2. Usiamo il metodo .put() che è il più solido per caricare file
+                        const snapshot = await imageRef.put(blob);
+
+                        console.log(`[Upload Foto ${index + 1}] Caricamento completato. Recupero link...`);
                         const downloadURL = await snapshot.ref.getDownloadURL();
                         return downloadURL;
                     } catch (err) {
-                        console.error(`[Upload Foto ${index + 1}] Errore tentativo ${i + 1}:`, err);
+                        console.error(`[Upload Foto ${index + 1}] Errore al tentativo ${i + 1}:`, err);
                         if (i === retries) throw err;
-                        await new Promise(r => setTimeout(r, 2000));
+                        // Attesa crescente tra i tentativi
+                        await new Promise(r => setTimeout(r, 2000 + (i * 1000)));
                     }
                 }
             };
