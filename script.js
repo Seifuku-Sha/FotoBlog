@@ -345,6 +345,11 @@ document.addEventListener('DOMContentLoaded', () => {
         formAddReportage.reset();
         imagePreview.innerHTML = '<span>Nessuna foto selezionata</span>';
         currentImagesBase64 = [];
+
+        // Piano B: Reset campo link manuali
+        const manualInput = document.getElementById('rep-manual-urls');
+        if (manualInput) manualInput.value = '';
+
         var btn = formAddReportage.querySelector('button[type="submit"]');
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
@@ -437,8 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── SALVA REPORTAGE ─────────────────────────────────────────────────────
     formAddReportage.addEventListener('submit', async function (e) {
         e.preventDefault();
-        if (!currentImagesBase64.length) {
-            alert("Seleziona almeno una foto prima di continuare.");
+
+        // Piano B: Recupero link manuali se presenti
+        const manualUrlsInput = document.getElementById('rep-manual-urls');
+        const manualUrlsArr = manualUrlsInput ? manualUrlsInput.value.split('\n').map(u => u.trim()).filter(u => u.length > 0) : [];
+
+        if (!currentImagesBase64.length && !manualUrlsArr.length) {
+            alert("Seleziona almeno una foto o incolla almeno un link (Piano B) prima di continuare.");
             return;
         }
 
@@ -491,16 +501,38 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const uploadPromise = async () => {
+                // Aggiungiamo subito i link manuali (Piano B) all'array finale
+                if (manualUrlsArr.length > 0) {
+                    uploadedImageUrls.push(...manualUrlsArr);
+                    console.log("Link manuali aggiunti:", manualUrlsArr.length);
+                }
+
+                // Se non ci sono nuove foto fisiche da caricare, usiamo solo i link manuali 
+                if (currentImagesBase64.length === 0) {
+                    console.log("Nessuna foto fisica da caricare, uso solo link manuali.");
+                    return;
+                }
+
                 btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento di ${currentImagesBase64.length} foto in corso...`;
 
                 // Carichiamo le foto 1 alla volta (sequenziale)
-                // È il metodo più lento ma il più STABILE in assoluto per grandi quantità di file
-                for (let i = 0; i < currentImagesBase64.length; i++) {
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
+                try {
+                    for (let i = 0; i < currentImagesBase64.length; i++) {
+                        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
 
-                    const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
-                    const downloadURL = await uploadWithRetry(currentImagesBase64[i], imageRef, i);
-                    uploadedImageUrls.push(downloadURL);
+                        const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
+                        const downloadURL = await uploadWithRetry(currentImagesBase64[i], imageRef, i);
+                        uploadedImageUrls.push(downloadURL);
+                    }
+                } catch (error) {
+                    console.error("Errore durante l'upload automatico:", error);
+                    // Se l'upload automatico fallisce ma abbiamo link manuali, continuiamo!
+                    if (manualUrlsArr.length > 0) {
+                        alert("L'upload automatico ha avuto un problema (CORS), ma userò i link manuali che hai incollato. Procedo col salvataggio.");
+                    } else {
+                        // Se non abbiamo nemmeno link manuali, allora dobbiamo fermarci
+                        throw new Error("L'upload automatico è fallito e non ci sono link manuali di riserva. Prova a caricare le foto su Firebase Storage manualmente e incolla i link nel campo 'Piano B'.");
+                    }
                 }
 
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati reportage...';

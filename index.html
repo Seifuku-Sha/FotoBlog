@@ -94,11 +94,27 @@
             <form id="form-add-reportage">
                 <!-- Immagini -->
                 <div class="form-group">
-                    <label for="rep-images">Foto (Puoi selezionare più file)</label>
-                    <input type="file" id="rep-images" accept="image/*" multiple required>
+                    <label for="rep-images">Foto (Upload automatico - Seleziona qui)</label>
+                    <input type="file" id="rep-images" accept="image/*" multiple>
                     <div id="image-preview" class="image-preview-area">
                         <span>Nessuna foto selezionata</span>
                     </div>
+                </div>
+
+                <!-- Piano B: Link Manuali -->
+                <div class="form-group"
+                    style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed var(--accent);">
+                    <label for="rep-manual-urls"
+                        style="color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px;">
+                        <i class="fas fa-life-ring"></i> Oppure incolla i link (Piano B)
+                    </label>
+                    <p style="font-size: 0.85em; opacity: 0.8; margin-bottom: 10px; line-height: 1.4;">
+                        Se l'upload automatico fallisce: carica le foto su <strong>Firebase Storage</strong>, copia i
+                        link e incollali qui (uno per riga).
+                    </p>
+                    <textarea id="rep-manual-urls"
+                        placeholder="Incolla i link qui...&#10;https://firebasestorage.googleapis.com/...&#10;https://firebasestorage.googleapis.com/..."
+                        style="width: 100%; height: 100px; background: #1a1a1a; border: 1px solid #333; color: #eee; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; resize: vertical;"></textarea>
                 </div>
 
                 <!-- Descrizione -->
