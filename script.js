@@ -459,29 +459,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const reportageId = `rep_${timestamp}`;
             const uploadedImageUrls = [];
 
-            // Timeout complessivo per l'operazione (aumentato a 60 secondi perché il caricamento immagini può essere lungo)
+            // Timeout complessivo per l'operazione (aumentato a 3 minuti = 180 secondi)
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Timeout: Operazione troppo lunga. Riprova con meno foto o controlla la connessione internet.")), 60000)
+                setTimeout(() => reject(new Error("Timeout: Il caricamento sta impiegando più di 3 minuti. La tua connessione potrebbe essere troppo lenta per questo numero di foto ad alta risoluzione, prova in due tranche.")), 180000)
             );
 
-            const uploadPromise = async () => {
-                // 1. Carica le immagini su Storage e ottieni gli URL pubblici
-                for (let i = 0; i < currentImagesBase64.length; i++) {
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
-                    const base64Str = currentImagesBase64[i];
+            // Funzione di utilità per caricare una singola immagine con ricaricamento (retry)
+            const uploadWithRetry = async (base64Str, imageRef, retries = 2) => {
+                const base64Data = base64Str.split(',')[1];
+                const contentTypeMatch = base64Str.match(/data:([^;]+);/);
+                const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
 
-                    // Separa l'intestazione data:image/... base64 dai dati effettivi
-                    const base64Data = base64Str.split(',')[1];
-                    const contentTypeMatch = base64Str.match(/data:([^;]+);/);
-                    const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
-
-                    const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
-
-                    // Carica su Firebase Storage in formato base64
-                    const snapshot = await imageRef.putString(base64Data, 'base64', { contentType: contentType });
-                    const downloadURL = await snapshot.ref.getDownloadURL();
-                    uploadedImageUrls.push(downloadURL);
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const snapshot = await imageRef.putString(base64Data, 'base64', { contentType: contentType });
+                        const downloadURL = await snapshot.ref.getDownloadURL();
+                        return downloadURL;
+                    } catch (err) {
+                        if (i === retries) throw err;
+                        console.warn(`Tentativo ${i + 1} fallito, riprovo...`, err);
+                        await new Promise(r => setTimeout(r, 1000)); // Attendi 1 sec prima di riprovare
+                    }
                 }
+            };
+
+            const uploadPromise = async () => {
+                const uploadPromises = [];
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento di ${currentImagesBase64.length} foto in corso...`;
+
+                // 1. Avvia tutti i caricamenti in parallelo per fare molto più in fretta
+                for (let i = 0; i < currentImagesBase64.length; i++) {
+                    const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
+                    uploadPromises.push(uploadWithRetry(currentImagesBase64[i], imageRef));
+                }
+
+                // Attendi che TUTTI i caricamenti paralleli finiscano
+                const urls = await Promise.all(uploadPromises);
+                uploadedImageUrls.push(...urls);
 
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati reportage...';
 
