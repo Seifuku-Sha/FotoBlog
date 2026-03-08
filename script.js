@@ -126,20 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const repData = Object.assign({ id: doc.id, images: [] }, doc.data());
                 reportages.push(repData);
 
-                // Carica le foto associate a questo reportage nella collezione "photos"
+                // Carica le foto associate a questo reportage (ordinamento in memoria per evitare errori di indice)
                 window.db.collection("photos")
                     .where("reportageId", "==", doc.id)
-                    .orderBy("index", "asc")
                     .get()
                     .then(photoSnap => {
-                        const photos = [];
-                        photoSnap.forEach(pDoc => photos.push(pDoc.data().base64));
-                        repData.images = photos;
+                        const photosWithIndex = [];
+                        photoSnap.forEach(pDoc => photosWithIndex.push(pDoc.data()));
+
+                        // Ordiniamo le foto per l'indice salvato direttamente nel browser
+                        photosWithIndex.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+                        repData.images = photosWithIndex.map(p => p.base64);
                         renderReportages(); // Aggiorna la vista quando le foto arrivano
 
                         // Backup locale aggiornato
                         localStorage.setItem('local_backup_reportages', JSON.stringify(reportages));
-                    });
+                    })
+                    .catch(err => console.error("Errore caricamento foto:", err));
             });
             renderReportages();
         });
@@ -207,13 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminazione...';
 
                     try {
-                        // 1. Trova ed elimina tutte le foto associate in "photos"
                         const photoSnap = await window.db.collection("photos").where("reportageId", "==", id).get();
                         const batch = window.db.batch();
                         photoSnap.forEach(pDoc => batch.delete(pDoc.ref));
                         await batch.commit();
-
-                        // 2. Elimina il documento "madre" del reportage
                         await window.db.collection("reportages").doc(id).delete();
                     } catch (err) {
                         console.error("Errore eliminazione:", err);
@@ -267,8 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const timestamp = Date.now();
-
-            // 1. Crea il documento principale del reportage
             const repRef = await window.db.collection("reportages").add({
                 desc: document.getElementById('rep-desc').value,
                 date: document.getElementById('rep-date').value,
@@ -279,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const reportageId = repRef.id;
 
-            // 2. Salva le foto una ad una come documenti separati
             for (let i = 0; i < currentImagesBase64.length; i++) {
                 const prog = Math.round(((i + 1) / currentImagesBase64.length) * 100);
                 btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> FOTO ${i + 1}/${currentImagesBase64.length} (${prog}%)`;
