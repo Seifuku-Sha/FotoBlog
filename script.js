@@ -11,8 +11,7 @@ try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         window.db = firebase.firestore();
-        window.storage = firebase.storage();
-        console.log("Firebase pronto.");
+        console.log("Firestore Pronto (Strada B).");
     }
 } catch (e) {
     console.error("Firebase Init Error:", e);
@@ -99,8 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAdminUI();
 
     function shrinkImage(base64Str, quality, maxDim) {
-        quality = quality || 0.7;
-        maxDim = maxDim || 4000;
+        quality = quality || 0.6; // Ottimizzazione spazio per Strada B
+        maxDim = maxDim || 1200;  // Massimo 1200px per non eccedere 1MB su Firestore
         return new Promise(resolve => {
             const img = new Image();
             img.onload = () => {
@@ -175,14 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
                 if (confirm("Eliminare?")) {
-                    const rep = reportages.find(r => r.id === id);
-                    if (rep && rep.images) {
-                        for (let url of rep.images) {
-                            if (url.includes('firebasestorage')) {
-                                try { await window.storage.refFromURL(url).delete(); } catch (e) { }
-                            }
-                        }
-                    }
                     await window.db.collection("reportages").doc(id).delete();
                 }
             });
@@ -225,35 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentImagesBase64.length) return alert("Scegli le foto.");
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pubblicazione...';
 
         try {
-            const rid = `rep_${Date.now()}`;
-            const urls = [];
-
-            for (let i = 0; i < currentImagesBase64.length; i++) {
-                const ref = window.storage.ref(`reportages/${rid}/img_${i}.jpg`);
-                // Uso putString(..., 'data_url') -> Molto più robusto
-                const task = ref.putString(currentImagesBase64[i], 'data_url');
-
-                await new Promise((res, rej) => {
-                    const tout = setTimeout(() => rej(new Error("Timeout foto " + (i + 1))), 90000);
-                    task.on('state_changed',
-                        snap => {
-                            const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                            btn.innerHTML = `FOTO ${i + 1}: ${p}%`;
-                        },
-                        rej,
-                        async () => {
-                            clearTimeout(tout);
-                            urls.push(await task.snapshot.ref.getDownloadURL());
-                            res();
-                        }
-                    );
-                });
-            }
-
             await window.db.collection("reportages").add({
-                images: urls,
+                images: currentImagesBase64, // Salvataggio diretto Base64 (Strada B)
                 desc: document.getElementById('rep-desc').value,
                 date: document.getElementById('rep-date').value,
                 location: document.getElementById('rep-location').value,
@@ -262,10 +229,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             closeAdd();
-            alert("Pubblicato!");
+            alert("Reportage pubblicato con successo!");
         } catch (err) {
             console.error(err);
-            alert("Errore: " + (err.message || "Fallito."));
+            alert("Errore: Immagini troppo pesanti o problema database. Prova a caricarne meno.");
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Pubblica';
