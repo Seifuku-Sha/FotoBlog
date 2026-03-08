@@ -34,7 +34,7 @@ body {
     background-color: #f7f7f7;
     background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
     background-size: 20px 20px;
-    
+
     /* Protezione globale: impedisce la selezione del testo in tutto il blog */
     user-select: none;
     -webkit-user-select: none;
@@ -542,4 +542,16 @@ body {
         right: 15px;
         font-size: 2.5rem;
     }
+}
+
+/* Stato caricamento immagini asincrone (Strada C) */
+.loading-images {
+    text-align: center;
+    padding: 30px;
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    margin: 10px 0;
 }

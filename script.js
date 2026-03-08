@@ -11,7 +11,7 @@ try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         window.db = firebase.firestore();
-        console.log("Firestore Pronto (Strada B).");
+        console.log("Firestore Pronto (Strada C - Illimitata).");
     }
 } catch (e) {
     console.error("Firebase Init Error:", e);
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLightboxIndex = 0;
     let isAdmin = false;
 
+    // --- FALLBACK LOCALE ---
     try {
         isAdmin = localStorage.getItem('blog_admin_access') === 'true';
         const backup = localStorage.getItem('local_backup_reportages');
@@ -98,8 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAdminUI();
 
     function shrinkImage(base64Str, quality, maxDim) {
-        quality = quality || 0.6; // Ottimizzazione spazio per Strada B
-        maxDim = maxDim || 1200;  // Massimo 1200px per non eccedere 1MB su Firestore
+        quality = quality || 0.7; // Qualità superiore per Strada C
+        maxDim = maxDim || 1400;  // 1400px (ogni foto ha il suo documento da 1MB dedicato)
         return new Promise(resolve => {
             const img = new Image();
             img.onload = () => {
@@ -115,12 +116,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ─── CARICAMENTO REPORTAGE (STRUTTURA FRAMMENTATA) ──────────────────────────
     function loadReportages() {
         if (typeof firebase === 'undefined' || !window.db) return;
+
         window.db.collection("reportages").orderBy("timestamp", "desc").onSnapshot(snap => {
             reportages = [];
-            snap.forEach(doc => reportages.push(Object.assign({ id: doc.id }, doc.data())));
-            localStorage.setItem('local_backup_reportages', JSON.stringify(reportages));
+            snap.forEach(doc => {
+                const repData = Object.assign({ id: doc.id, images: [] }, doc.data());
+                reportages.push(repData);
+
+                // Carica le foto associate a questo reportage nella collezione "photos"
+                window.db.collection("photos")
+                    .where("reportageId", "==", doc.id)
+                    .orderBy("index", "asc")
+                    .get()
+                    .then(photoSnap => {
+                        const photos = [];
+                        photoSnap.forEach(pDoc => photos.push(pDoc.data().base64));
+                        repData.images = photos;
+                        renderReportages(); // Aggiorna la vista quando le foto arrivano
+
+                        // Backup locale aggiornato
+                        localStorage.setItem('local_backup_reportages', JSON.stringify(reportages));
+                    });
+            });
             renderReportages();
         });
     }
@@ -134,7 +154,15 @@ document.addEventListener('DOMContentLoaded', () => {
         reportages.forEach(rep => {
             const article = document.createElement('article');
             article.className = 'glass-panel reportage-post';
-            const imgHtml = (rep.images || []).map(img => `<img src="${img}" alt="Foto" draggable="false">`).join('');
+
+            // Gestione foto caricate asincronamente
+            let imgHtml = '';
+            if (rep.images && rep.images.length > 0) {
+                imgHtml = rep.images.map(img => `<img src="${img}" alt="Foto" draggable="false">`).join('');
+            } else {
+                imgHtml = '<div class="loading-images"><i class="fas fa-spinner fa-spin"></i> Caricamento immagini...</div>';
+            }
+
             const delBtn = isAdmin ? `<button class="btn-delete" data-id="${rep.id}"><i class="fas fa-trash"></i> Elimina</button>` : '';
             const comms = (rep.comments || []).map(c => `<div class="comment-item"><b>${c.name}</b>: ${c.text}</div>`).join('');
 
@@ -146,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <small>${rep.date} | ${rep.location}</small>
                 </div>
                 <div class="comments-section">
+                    <h5>Commenti</h5>
                     <div class="comments-list">${comms}</div>
                     <form class="comment-form" data-id="${rep.id}">
                         <input type="text" name="name" placeholder="Nome" required>
@@ -173,8 +202,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
-                if (confirm("Eliminare?")) {
-                    await window.db.collection("reportages").doc(id).delete();
+                if (confirm("Attenzione: Questa azione eliminerà definitivamente il reportage e tutte le sue foto. Procedere?")) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminazione...';
+
+                    try {
+                        // 1. Trova ed elimina tutte le foto associate in "photos"
+                        const photoSnap = await window.db.collection("photos").where("reportageId", "==", id).get();
+                        const batch = window.db.batch();
+                        photoSnap.forEach(pDoc => batch.delete(pDoc.ref));
+                        await batch.commit();
+
+                        // 2. Elimina il documento "madre" del reportage
+                        await window.db.collection("reportages").doc(id).delete();
+                    } catch (err) {
+                        console.error("Errore eliminazione:", err);
+                        alert("Errore durante l'eliminazione.");
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-trash"></i> Elimina';
+                    }
                 }
             });
         });
@@ -198,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseModal.addEventListener('click', closeAdd);
 
     imagesInput.addEventListener('change', async function () {
-        imagePreview.innerHTML = '<span>Elaborazione...</span>';
+        imagePreview.innerHTML = '<span>Elaborazione immagini in corso...</span>';
         currentImagesBase64 = [];
         for (let file of Array.from(this.files)) {
             const base64 = await new Promise(res => {
@@ -211,28 +257,46 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.innerHTML = currentImagesBase64.map(b => `<img src="${b}">`).join('');
     });
 
+    // ─── SALVA (STRUTTURA FRAMMENTATA - ILLIMITATA) ─────────────────────────────
     formAddReportage.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!currentImagesBase64.length) return alert("Scegli le foto.");
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pubblicazione...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparazione...';
 
         try {
-            await window.db.collection("reportages").add({
-                images: currentImagesBase64, // Salvataggio diretto Base64 (Strada B)
+            const timestamp = Date.now();
+
+            // 1. Crea il documento principale del reportage
+            const repRef = await window.db.collection("reportages").add({
                 desc: document.getElementById('rep-desc').value,
                 date: document.getElementById('rep-date').value,
                 location: document.getElementById('rep-location').value,
                 comments: [],
-                timestamp: Date.now()
+                timestamp: timestamp
             });
+
+            const reportageId = repRef.id;
+
+            // 2. Salva le foto una ad una come documenti separati
+            for (let i = 0; i < currentImagesBase64.length; i++) {
+                const prog = Math.round(((i + 1) / currentImagesBase64.length) * 100);
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> FOTO ${i + 1}/${currentImagesBase64.length} (${prog}%)`;
+
+                await window.db.collection("photos").add({
+                    reportageId: reportageId,
+                    base64: currentImagesBase64[i],
+                    index: i,
+                    timestamp: timestamp
+                });
+            }
 
             closeAdd();
             alert("Reportage pubblicato con successo!");
         } catch (err) {
-            console.error(err);
-            alert("Errore: Immagini troppo pesanti o problema database. Prova a caricarne meno.");
+            console.error("Errore salvataggio Strada C:", err);
+            alert("Errore durante il caricamento. Riprova con meno foto o controlla la connessione.");
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Pubblica';
@@ -263,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') closeL();
     });
 
+    // Protezioni
     document.addEventListener('contextmenu', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
     document.addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
     document.addEventListener('keydown', e => { if (e.ctrlKey && (e.key === 's' || e.key === 'u')) e.preventDefault(); });
