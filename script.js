@@ -501,10 +501,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Carichiamo le foto 1 alla volta (sequenziale)
                 for (let i = 0; i < currentImagesBase64.length; i++) {
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
+                    const statusText = `Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
+                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${statusText}`;
+                    console.log(`[Reportage] ${statusText}`);
 
                     const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
-                    const downloadURL = await uploadWithRetry(currentImagesBase64[i], imageRef, i);
+
+                    // Timeout per la SINGOLA foto (60 secondi) per evitare blocchi infiniti
+                    const singleUploadTimeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Timeout singola foto")), 60000)
+                    );
+
+                    const downloadURL = await Promise.race([
+                        uploadWithRetry(currentImagesBase64[i], imageRef, i),
+                        singleUploadTimeout
+                    ]);
+
                     uploadedImageUrls.push(downloadURL);
                 }
 
@@ -528,12 +540,15 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Reportage pubblicato con successo!");
 
         } catch (err) {
-            console.error("Errore salvataggio:", err);
+            console.error("Errore salvataggio dettagliato:", err);
             var errorMsg = "Errore durante il salvataggio.";
+
             if (err.message.includes("Timeout")) {
-                errorMsg = err.message;
+                errorMsg = "Il caricamento è troppo lento o si è bloccato. Prova a caricare meno foto alla volta o controlla la tua connessione.";
             } else if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
-                errorMsg += "\n\nPermesso negato. Assicurati di aver impostato le REGOLE DI STORAGE (e Firestore) su 'allow read, write: if true;' nella console di Firebase come indicato nelle istruzioni.";
+                errorMsg += "\n\nPermesso negato. Verifica le REGOLE di Storage nella Console Firebase.";
+            } else if (err.message.includes("fetch") || err.code === 'storage/retry-limit-exceeded') {
+                errorMsg += "\n\nPossibile problema di CORS o Sicurezza. Se stai aprendo il file HTML direttamente, prova a caricarlo su GitHub Pages.";
             } else {
                 errorMsg += "\n\n" + (err.message || "Errore sconosciuto.");
             }
