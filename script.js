@@ -21,7 +21,6 @@ try {
 }
 
 // ─── CODICE DI ACCESSO ──────────────────────────────────────────────────────────
-// Per cambiare il codice: sostituisci "89Bf760rT$%" con la tua scelta
 const ACCESS_KEY = "89Bf760rT$%";
 
 // ─── AVVIO ───────────────────────────────────────────────────────────────────
@@ -47,8 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentImagesBase64 = [];
     let reportages = [];
-    let currentLightboxImages = []; // Lista immagini del reportage aperto
-    let currentLightboxIndex = 0;   // Indice immagine corrente
+    let currentLightboxImages = [];
+    let currentLightboxIndex = 0;
     let isAdmin = false;
 
     // --- FALLBACK LOCALE ---
@@ -57,25 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const backup = localStorage.getItem('local_backup_reportages');
         if (backup) {
             reportages = JSON.parse(backup);
-            console.log("Dati locali caricati come backup.");
         }
     } catch (e) {
         console.warn("localStorage non accessibile.");
     }
 
-    console.log("Script Avviato. Stato Admin:", isAdmin);
-
     // ─── AUTENTICAZIONE ──────────────────────────────────────────────────────
-
     function updateAdminUI() {
         if (isAdmin) {
             btnAddReportage.classList.remove('hidden');
             btnManage.style.color = 'var(--accent)';
-            btnManage.title = "Pannello attivo — clicca per uscire";
         } else {
             btnAddReportage.classList.add('hidden');
             btnManage.style.color = '#ccc';
-            btnManage.title = "Gestione";
         }
     }
 
@@ -116,12 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderReportages();
         } else {
             keyInput.style.border = '2px solid #cc0000';
-            keyInput.value = '';
-            keyInput.placeholder = 'Codice errato, riprova...';
-            setTimeout(() => {
-                keyInput.style.border = '1px solid #ccc';
-                keyInput.placeholder = 'Inserisci il codice';
-            }, 2000);
+            setTimeout(() => { keyInput.style.border = '1px solid #ccc'; }, 2000);
         }
     }
 
@@ -132,8 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─── COMPRESSIONE IMMAGINE ───────────────────────────────────────────────
     function shrinkImage(base64Str, quality, maxDim) {
-        quality = quality || 0.7; // Leggermente più alta qualità
-        maxDim = maxDim || 4000; // Alzato a 4000 per alta risoluzione (4K) 
+        quality = quality || 0.7;
+        maxDim = maxDim || 4000;
         return new Promise(function (resolve) {
             var img = new Image();
             img.onload = function () {
@@ -157,15 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadReportages() {
-        if (typeof firebase === 'undefined' || !window.db) {
-            reportageContainer.innerHTML =
-                '<div class="glass-panel" style="text-align:center;padding:40px;">' +
-                '<p style="color:#cc0000"><strong>Errore Caricamento SDK</strong><br>' +
-                'Sembra che il browser stia bloccando i componenti necessari per il database.<br>' +
-                'Prova a usare Chrome o Edge, oppure carica il sito online su Netlify.</p></div>';
-            return;
-        }
-
+        if (typeof firebase === 'undefined' || !window.db) return;
         window.db.collection("reportages")
             .orderBy("timestamp", "desc")
             .onSnapshot(function (snapshot) {
@@ -173,25 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 snapshot.forEach(function (docSnap) {
                     reportages.push(Object.assign({ id: docSnap.id }, docSnap.data()));
                 });
-
-                // Salva copia locale per emergenza
                 try {
                     localStorage.setItem('local_backup_reportages', JSON.stringify(reportages));
                 } catch (e) { }
-
                 renderReportages();
-            }, function (err) {
-                console.error("Errore Firestore:", err.code);
-                var msg = "Errore di connessione al database.";
-                if (err.code === 'permission-denied') {
-                    msg = "\u26a0\ufe0f <strong>Firestore non ancora configurato.</strong><br>" +
-                        "Vai su <a href='https://console.firebase.google.com' target='_blank'>console.firebase.google.com</a>" +
-                        " \u2192 progetto <strong>fotoblog-7fa65</strong> \u2192 <strong>Firestore Database</strong> \u2192 tab <strong>Regole</strong><br>" +
-                        "e imposta: <code>allow read, write: if true;</code> poi clicca <strong>Pubblica</strong>.";
-                }
-                reportageContainer.innerHTML =
-                    '<div class="glass-panel" style="text-align:center;padding:40px;">' +
-                    '<p style="color:#cc0000;line-height:2">' + msg + '</p></div>';
             });
     }
 
@@ -199,66 +164,42 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderReportages() {
         reportageContainer.innerHTML = '';
         if (reportages.length === 0) {
-            reportageContainer.innerHTML =
-                '<div class="glass-panel" style="text-align:center;padding:40px;">' +
-                '<p>Non ci sono ancora reportage pubblicati.<br>' +
-                '<small style="color:#999">Usa il lucchetto in fondo alla pagina per accedere e pubblicare.</small></p></div>';
+            reportageContainer.innerHTML = '<div class="glass-panel" style="text-align:center;padding:40px;"><p>Nessun reportage.</p></div>';
             return;
         }
 
         reportages.forEach(function (rep) {
             var article = document.createElement('article');
             article.className = 'glass-panel reportage-post';
-            article.id = 'rep-' + rep.id;
 
-            var commentsHtml = '';
-            if (rep.comments && rep.comments.length > 0) {
-                rep.comments.forEach(function (c) {
-                    commentsHtml += '<div class="comment-item">' +
-                        '<div class="comment-author">' + c.name + '</div>' +
-                        '<div class="comment-text">' + c.text + '</div></div>';
-                });
-            } else {
-                commentsHtml = '<p style="color:#666;font-size:0.9rem;margin-bottom:10px">Nessun commento ancora. Sii il primo!</p>';
-            }
+            var commentsHtml = (rep.comments || []).map(c =>
+                `<div class="comment-item"><div class="comment-author">${c.name}</div><div class="comment-text">${c.text}</div></div>`
+            ).join('') || '<p style="color:#666;font-size:0.9rem">Nessun commento.</p>';
 
-            var formattedDate = '';
-            if (rep.date) {
-                formattedDate = new Date(rep.date).toLocaleDateString('it-IT', {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
-            }
+            var formattedDate = rep.date ? new Date(rep.date).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 
-            var imagesHtml = '';
-            if (rep.images && rep.images.length > 0) {
-                rep.images.forEach(function (img) {
-                    // draggable="false" per impedire il trascinamento dell'immagine
-                    imagesHtml += '<img src="' + img + '" alt="Foto Reportage" draggable="false">';
-                });
-            }
+            var imagesHtml = (rep.images || []).map(img =>
+                `<img src="${img}" alt="Foto" draggable="false">`
+            ).join('');
 
-            var deleteBtn = isAdmin
-                ? '<div class="reportage-header-actions"><button class="btn-delete" data-id="' + rep.id + '"><i class="fas fa-trash"></i> Elimina reportage</button></div>'
-                : '';
+            var deleteBtn = isAdmin ? `<button class="btn-delete" data-id="${rep.id}"><i class="fas fa-trash"></i> Elimina</button>` : '';
 
-            article.innerHTML = deleteBtn +
-                '<div class="reportage-images">' + imagesHtml + '</div>' +
-                '<div class="reportage-content">' +
-                '<p class="reportage-desc">' + rep.desc.replace(/\n/g, '<br>') + '</p>' +
-                '<p class="reportage-meta">' +
-                '<i class="fas fa-calendar-alt"></i> ' + formattedDate +
-                '<span style="margin:0 10px">|</span>' +
-                '<i class="fas fa-map-marker-alt"></i> ' + rep.location +
-                '</p></div>' +
-                '<div class="comments-section"><h5>Commenti</h5>' +
-                '<div class="comments-list">' + commentsHtml + '</div>' +
-                '<form class="comment-form" data-id="' + rep.id + '">' +
-                '<input type="text" name="name" placeholder="Nome" required>' +
-                '<input type="email" name="email" placeholder="Email" required>' +
-                '<textarea name="text" placeholder="Scrivi un commento..." required></textarea>' +
-                '<button type="submit">Aggiungi Commento</button>' +
-                '</form></div>';
-
+            article.innerHTML = `
+                ${deleteBtn}
+                <div class="reportage-images">${imagesHtml}</div>
+                <div class="reportage-content">
+                    <p class="reportage-desc">${rep.desc.replace(/\n/g, '<br>')}</p>
+                    <p class="reportage-meta"><i class="fas fa-calendar-alt"></i> ${formattedDate} | <i class="fas fa-map-marker-alt"></i> ${rep.location}</p>
+                </div>
+                <div class="comments-section">
+                    <h5>Commenti</h5>
+                    <div class="comments-list">${commentsHtml}</div>
+                    <form class="comment-form" data-id="${rep.id}">
+                        <input type="text" name="name" placeholder="Nome" required>
+                        <textarea name="text" placeholder="Commento..." required></textarea>
+                        <button type="submit">Invia</button>
+                    </form>
+                </div>`;
             reportageContainer.appendChild(article);
         });
 
@@ -266,74 +207,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) attachDeleteListeners();
     }
 
-    // ─── COMMENTI ────────────────────────────────────────────────────────────
     function attachCommentListeners() {
-        document.querySelectorAll('.comment-form').forEach(function (form) {
+        document.querySelectorAll('.comment-form').forEach(form => {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                var btn = form.querySelector('button[type="submit"]');
-                btn.disabled = true;
-                btn.textContent = 'Invio...';
-
-                var docId = form.getAttribute('data-id');
-                var name = form.querySelector('[name="name"]').value;
-                var text = form.querySelector('[name="text"]').value;
-
-                var rep = reportages.find(function (r) { return r.id === docId; });
+                const docId = form.getAttribute('data-id');
+                const name = form.querySelector('[name="name"]').value;
+                const text = form.querySelector('[name="text"]').value;
+                const rep = reportages.find(r => r.id === docId);
                 if (rep) {
-                    var newComments = (rep.comments || []).concat([{ name: name, text: text }]);
-                    window.db.collection("reportages").doc(docId).update({ comments: newComments })
-                        .then(function () {
-                            btn.disabled = false;
-                            btn.textContent = 'Aggiungi Commento';
-                        })
-                        .catch(function (err) {
-                            console.error(err);
-                            btn.disabled = false;
-                            btn.textContent = 'Aggiungi Commento';
-                        });
+                    const newComments = (rep.comments || []).concat([{ name, text }]);
+                    window.db.collection("reportages").doc(docId).update({ comments: newComments });
                 }
             });
         });
     }
 
-    // ─── ELIMINA ─────────────────────────────────────────────────────────────
     function attachDeleteListeners() {
-        document.querySelectorAll('.btn-delete').forEach(function (btn) {
-            btn.addEventListener('click', async function () {
-                var docId = btn.getAttribute('data-id');
-                if (confirm("Sei sicuro di voler eliminare questo reportage?")) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminazione...';
-                    try {
-                        // Trova il reportage per eliminare anche le immagini da Storage se possibile
-                        var rep = reportages.find(r => r.id === docId);
-                        if (rep && rep.images && rep.images.length > 0) {
-                            for (let url of rep.images) {
-                                if (typeof url === 'string' && url.includes('firebasestorage')) {
-                                    try {
-                                        var ref = window.storage.refFromURL(url);
-                                        await ref.delete();
-                                    } catch (err) {
-                                        console.warn("Impossibile eliminare l'immagine da storage:", url, err);
-                                    }
-                                }
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const docId = btn.getAttribute('data-id');
+                if (confirm("Eliminare?")) {
+                    const rep = reportages.find(r => r.id === docId);
+                    if (rep && rep.images) {
+                        for (let url of rep.images) {
+                            if (url.includes('firebasestorage')) {
+                                try { await window.storage.refFromURL(url).delete(); } catch (e) { }
                             }
                         }
-                        await window.db.collection("reportages").doc(docId).delete();
-                    } catch (err) {
-                        console.error("Errore durante l'eliminazione:", err);
-                        alert("Errore durante l'eliminazione: " + err.message);
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-trash"></i> Elimina reportage';
                     }
+                    await window.db.collection("reportages").doc(docId).delete();
                 }
             });
         });
     }
 
-    // ─── MODALE AGGIUNGI REPORTAGE ───────────────────────────────────────────
-    btnAddReportage.addEventListener('click', function () {
+    // ─── MODALE AGGIUNGI ─────────────────────────────────────────────────────
+    btnAddReportage.addEventListener('click', () => {
         modalAdd.classList.remove('hidden');
         modalAdd.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -346,25 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
         formAddReportage.reset();
         imagePreview.innerHTML = '<span>Nessuna foto selezionata</span>';
         currentImagesBase64 = [];
-
-        var btn = formAddReportage.querySelector('button[type="submit"]');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
     }
 
     btnCloseModal.addEventListener('click', closeModal);
-    modalAdd.addEventListener('click', function (e) { if (e.target === modalAdd) closeModal(); });
+    modalAdd.addEventListener('click', e => { if (e.target === modalAdd) closeModal(); });
 
-    // ─── LOGICA LIGHTBOX (ZOOM CON NAVIGAZIONE) ──────────────────────────────
-    reportageContainer.addEventListener('click', function (e) {
-        // Cerchiamo se il click è avvenuto su un'immagine dentro un reportage
+    // ─── LIGHTBOX ────────────────────────────────────────────────────────────
+    reportageContainer.addEventListener('click', e => {
         const targetImg = e.target.closest('.reportage-images img');
         if (targetImg) {
-            console.log("Apertura Lightbox per:", targetImg.src);
             const container = targetImg.closest('.reportage-images');
             currentLightboxImages = Array.from(container.querySelectorAll('img')).map(img => img.src);
             currentLightboxIndex = currentLightboxImages.indexOf(targetImg.src);
-
             showLightboxImage();
             modalLightbox.classList.remove('hidden');
             modalLightbox.classList.add('active');
@@ -393,36 +296,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeLightboxBtn.addEventListener('click', closeLightbox);
-    nextLightboxBtn.addEventListener('click', (e) => { e.stopPropagation(); nextImage(); });
-    prevLightboxBtn.addEventListener('click', (e) => { e.stopPropagation(); prevImage(); });
+    nextLightboxBtn.addEventListener('click', e => { e.stopPropagation(); nextImage(); });
+    prevLightboxBtn.addEventListener('click', e => { e.stopPropagation(); prevImage(); });
 
-    // Navigazione da tastiera
-    document.addEventListener('keydown', function (e) {
+    document.addEventListener('keydown', e => {
         if (!modalLightbox.classList.contains('active')) return;
         if (e.key === 'ArrowRight') nextImage();
         if (e.key === 'ArrowLeft') prevImage();
         if (e.key === 'Escape') closeLightbox();
     });
 
-    modalLightbox.addEventListener('click', function (e) {
-        if (e.target === modalLightbox || e.target.classList.contains('lightbox-container')) {
-            closeLightbox();
-        }
-    });
-
-    // ─── ANTEPRIMA FOTO ───────────────────────────────────────────────────────
+    // ─── ANTEPRIMA ───────────────────────────────────────────────────────────
     imagesInput.addEventListener('change', async function () {
-        imagePreview.innerHTML = '<span>Elaborazione immagini in corso...</span>';
+        imagePreview.innerHTML = '<span>Elaborazione...</span>';
         currentImagesBase64 = [];
-        var files = Array.from(this.files);
-        if (!files.length) {
-            imagePreview.innerHTML = '<span>Nessuna foto selezionata</span>';
-            return;
-        }
+        const files = Array.from(this.files);
+        if (!files.length) { imagePreview.innerHTML = '<span>Nessuna foto</span>'; return; }
 
-        // Elaborazione SEQUENZIALE per non bloccare il browser
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
+        for (let file of files) {
             const reader = new FileReader();
             const compressed = await new Promise(resolve => {
                 reader.onload = e => shrinkImage(e.target.result).then(resolve);
@@ -433,98 +324,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
         imagePreview.innerHTML = '';
         currentImagesBase64.forEach(base64 => {
-            var img = document.createElement('img');
+            const img = document.createElement('img');
             img.src = base64;
             imagePreview.appendChild(img);
         });
     });
 
-    // ─── SALVA REPORTAGE ─────────────────────────────────────────────────────
+    // ─── SALVA (CON PROGRESSO) ────────────────────────────────────────────────
     formAddReportage.addEventListener('submit', async function (e) {
         e.preventDefault();
+        if (!currentImagesBase64.length) { alert("Seleziona foto."); return; }
 
-        if (!currentImagesBase64.length) {
-            alert("Seleziona almeno una foto prima di continuare.");
-            return;
-        }
-
-        var btn = e.target.querySelector('button[type="submit"]');
+        const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio...';
-
-        if (typeof firebase === 'undefined' || !window.db || !window.storage) {
-            alert("Errore: Il database non \u00e8 inizializzato. Controlla la connessione.");
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
-            return;
-        }
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Avvio...';
 
         try {
-            // Data e identificativo cartella per Firebase Storage
             const timestamp = Date.now();
             const reportageId = `rep_${timestamp}`;
-            const uploadedImageUrls = [];
+            const uploadedUrls = [];
 
-            // Timeout complessivo per l'operazione (aumentato a 3 minuti = 180 secondi)
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Timeout: Il caricamento sta impiegando più di 3 minuti. La tua connessione potrebbe essere troppo lenta per questo numero di foto ad alta risoluzione, prova in due tranche.")), 180000)
+                setTimeout(() => reject(new Error("Timeout globale (5 min)")), 300000)
             );
 
-            // Funzione di utilità per caricare una singola immagine con ricaricamento (retry)
-            const uploadWithRetry = async (base64Str, imageRef, index, retries = 2) => {
-                for (let i = 0; i <= retries; i++) {
+            const uploadWithProgress = (base64Str, imageRef, index) => {
+                return new Promise(async (resolve, reject) => {
                     try {
-                        // 1. Convertiamo la stringa Base64 in un "Blob" (un vero file temporaneo)
-                        // Questo è molto più leggero per la memoria del browser
                         const response = await fetch(base64Str);
                         const blob = await response.blob();
-
-                        console.log(`[Upload Foto ${index + 1}] Tentativo ${i + 1}/${retries + 1} - Invio file binario...`);
-
-                        // 2. Usiamo il metodo .put() che è il più solido per caricare file
-                        const snapshot = await imageRef.put(blob);
-
-                        console.log(`[Upload Foto ${index + 1}] Caricamento completato. Recupero link...`);
-                        const downloadURL = await snapshot.ref.getDownloadURL();
-                        return downloadURL;
-                    } catch (err) {
-                        console.error(`[Upload Foto ${index + 1}] Errore al tentativo ${i + 1}:`, err);
-                        if (i === retries) throw err;
-                        // Attesa crescente tra i tentativi
-                        await new Promise(r => setTimeout(r, 2000 + (i * 1000)));
-                    }
-                }
+                        const uploadTask = imageRef.put(blob);
+                        uploadTask.on('state_changed',
+                            (snap) => {
+                                const prog = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> FOTO ${index + 1}: ${prog}%`;
+                            },
+                            reject,
+                            async () => resolve(await uploadTask.snapshot.ref.getDownloadURL())
+                        );
+                    } catch (err) { reject(err); }
+                });
             };
 
             const uploadPromise = async () => {
-                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Caricamento di ${currentImagesBase64.length} foto in corso...`;
-
-                // Carichiamo le foto 1 alla volta (sequenziale)
                 for (let i = 0; i < currentImagesBase64.length; i++) {
-                    const statusText = `Caricamento foto ${i + 1} di ${currentImagesBase64.length}...`;
-                    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${statusText}`;
-                    console.log(`[Reportage] ${statusText}`);
-
                     const imageRef = window.storage.ref(`reportages/${reportageId}/img_${i}.jpg`);
-
-                    // Timeout per la SINGOLA foto (60 secondi) per evitare blocchi infiniti
-                    const singleUploadTimeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("Timeout singola foto")), 60000)
-                    );
-
-                    const downloadURL = await Promise.race([
-                        uploadWithRetry(currentImagesBase64[i], imageRef, i),
-                        singleUploadTimeout
-                    ]);
-
-                    uploadedImageUrls.push(downloadURL);
+                    const singleTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout foto " + (i + 1))), 90000));
+                    uploadedUrls.push(await Promise.race([uploadWithProgress(currentImagesBase64[i], imageRef, i), singleTimeout]));
                 }
-
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati reportage...';
-
-                // 2. Salva il documento su Firestore
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio dati...';
                 await window.db.collection("reportages").add({
-                    images: uploadedImageUrls,
+                    images: uploadedUrls,
                     desc: document.getElementById('rep-desc').value,
                     date: document.getElementById('rep-date').value,
                     location: document.getElementById('rep-location').value,
@@ -534,62 +384,23 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             await Promise.race([uploadPromise(), timeoutPromise]);
-
-            console.log("Salvataggio completato con successo.");
             closeModal();
-            alert("Reportage pubblicato con successo!");
-
+            alert("Pubblicato!");
         } catch (err) {
-            console.error("Errore salvataggio dettagliato:", err);
-            var errorMsg = "Errore durante il salvataggio.";
-
-            if (err.message.includes("Timeout")) {
-                errorMsg = "Il caricamento è troppo lento o si è bloccato. Prova a caricare meno foto alla volta o controlla la tua connessione.";
-            } else if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
-                errorMsg += "\n\nPermesso negato. Verifica le REGOLE di Storage nella Console Firebase.";
-            } else if (err.message.includes("fetch") || err.code === 'storage/retry-limit-exceeded') {
-                errorMsg += "\n\nPossibile problema di CORS o Sicurezza. Se stai aprendo il file HTML direttamente, prova a caricarlo su GitHub Pages.";
-            } else {
-                errorMsg += "\n\n" + (err.message || "Errore sconosciuto.");
-            }
-            alert(errorMsg);
+            console.error(err);
+            alert("Errore: " + (err.message || "Caricamento fallito."));
         } finally {
-            if (modalAdd.classList.contains('active')) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
-            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Aggiungi';
         }
     });
 
-    // ─── PROTEZIONE IMMAGINI ────────────────────────────────────────────────
-    // Impedisce il tasto destro su tutto il documento per le immagini
-    document.addEventListener('contextmenu', function (e) {
-        if (e.target.tagName === 'IMG') {
-            e.preventDefault();
-            return false;
-        }
+    // ─── PROTEZIONE ──────────────────────────────────────────────────────────
+    document.addEventListener('contextmenu', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
+    document.addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && (e.key === 's' || e.key === 'u')) e.preventDefault();
     });
 
-    // Impedisce il trascinamento (drag) delle immagini
-    document.addEventListener('dragstart', function (e) {
-        if (e.target.tagName === 'IMG') {
-            e.preventDefault();
-            return false;
-        }
-    });
-
-    // Blocca scorciatoie comuni per salvataggio o ispezione base
-    document.addEventListener('keydown', function (e) {
-        // Ctrl+S (Salva con nome)
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-        }
-        // Ctrl+U (Visualizza sorgente)
-        if (e.ctrlKey && e.key === 'u') {
-            e.preventDefault();
-        }
-    });
-
-    // ─── START ───────────────────────────────────────────────────────────────
     loadReportages();
 });
