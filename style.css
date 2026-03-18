@@ -41,6 +41,12 @@ img {
   pointer-events: none;
 }
 
+/* Blocca selezione testo globale (impedisce copia via tastiera) */
+.rep-gallery, .rep-main-photo, .rep-thumbnails {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .hidden { display: none !important; }
 
 /* ── NAV ── */
@@ -408,9 +414,9 @@ img {
 
 .rep-location-date {
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text3);
-  letter-spacing: 0.15em;
+  font-size: 15px;
+  color: var(--text2);
+  letter-spacing: 0.1em;
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
@@ -442,14 +448,14 @@ img {
 
 .comment-item b {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 14px;
   color: var(--gold2);
   display: block;
   margin-bottom: 4px;
 }
 
 .comment-item span {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text2);
 }
 

@@ -444,9 +444,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // ══════════════════════════════
   document.addEventListener('contextmenu', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
   document.addEventListener('dragstart',   e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
-  document.addEventListener('keydown',     e => {
+  // Blocca Ctrl+S, Ctrl+U, Ctrl+Shift+I (devtools), F12
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12') { e.preventDefault(); return; }
+    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) { e.preventDefault(); return; }
     if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.key === 'u' || e.key === 'U')) e.preventDefault();
   });
+  // Blocca long-press su mobile (iOS/Android)
+  document.addEventListener('touchstart', e => {
+    if (e.target.tagName === 'IMG') e.preventDefault();
+  }, { passive: false });
+  // Blocca print screen indirettamente disattivando la visibilità in print
+  const printStyle = document.createElement('style');
+  printStyle.textContent = '@media print { img { display: none !important; } }';
+  document.head.appendChild(printStyle);
 
   // ══════════════════════════════
   // AVVIO
