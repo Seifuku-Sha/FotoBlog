@@ -489,12 +489,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const img = new Image();
       img.onload = () => {
         let w = img.width, h = img.height;
-        if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
-        else if (h > maxDim)     { w = Math.round(w * maxDim / h); h = maxDim; }
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        res(c.toDataURL('image/jpeg', quality));
+        const limit = 900;
+        if (w > h && w > limit) { h = Math.round(h * limit / w); w = limit; }
+        else if (h > limit)     { w = Math.round(w * limit / h); h = limit; }
+        const c   = document.createElement('canvas');
+        c.width   = w;
+        c.height  = h;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        // Filigrana 征服者 in basso a destra
+        const fontSize = Math.max(18, Math.round(w * 0.04));
+        ctx.font          = fontSize + 'px serif';
+        ctx.textAlign     = 'right';
+        ctx.textBaseline  = 'bottom';
+        ctx.shadowColor   = 'rgba(0,0,0,0.75)';
+        ctx.shadowBlur    = 7;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        ctx.globalAlpha   = 0.70;
+        ctx.fillStyle     = '#ffffff';
+        ctx.fillText('征服者', w - 14, h - 12);
+        ctx.globalAlpha   = 1;
+        ctx.shadowColor   = 'transparent';
+        res(c.toDataURL('image/jpeg', quality || 0.72));
       };
       img.src = base64;
     });
