@@ -1,158 +1,149 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Un metro di Distanza</title>
-    <!-- Google Fonts per un look moderno -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;700&display=swap"
-        rel="stylesheet">
-    <!-- Icone -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A un metro di distanza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <!-- Rimuoviamo il vecchio overlay di sfondo -->
-    <!-- <div class="background-overlay"></div> -->
-
-    <div class="container">
-        <!-- Header del Blog -->
-        <header class="glass-panel main-header">
-            <div class="header-logo">
-                <img src="sfondo.jpg" alt="Leica Camera Logo" class="leica-logo">
-            </div>
-            <div class="header-text">
-                <h1>A un metro di distanza</h1>
-                <h2>Reportage sulla presenza umana</h2>
-            </div>
-        </header>
-
-        <!-- Sezione Chi sono -->
-        <section class="glass-panel about-section">
-            <h3>Chi sono</h3>
-            <p>Mi chiamo Luciano e sono un appassionato di fotografia. Mi piace raccontare storie cercando di
-                catturare l'essenza della presenza umana nel mondo che ci circonda.</p>
-        </section>
-
-        <!-- Container principale per i Reportage (verranno generati dinamicamente qui) -->
-        <main id="reportage-container">
-            <!-- Esempio strutturale (verrà gestito via JS) -->
-            <!--
-            <article class="glass-panel reportage-post">
-                <div class="reportage-image">
-                    <img src="path/to/image" alt="Reportage">
-                </div>
-                <div class="reportage-content">
-                    <h4 class="reportage-title">Titolo (opzionale)</h4>
-                    <p class="reportage-desc">Descrizione...</p>
-                    <p class="reportage-meta"><i class="fas fa-calendar-alt"></i> Data <i class="fas fa-map-marker-alt"></i> Luogo, Evento</p>
-                </div>
-                
-                <div class="comments-section">
-                    <h5>Commenti</h5>
-                    <div class="comments-list">...</div>
-                    <form class="comment-form">
-                        <input type="text" placeholder="Nome" required>
-                        <input type="email" placeholder="Email" required>
-                        <textarea placeholder="Scrivi commento..." required></textarea>
-                        <button type="submit">Aggiungi Commento</button>
-                    </form>
-                </div>
-            </article>
-            -->
-        </main>
+  <!-- NAV -->
+  <nav id="main-nav">
+    <div class="nav-left">
+      <img src="sfondo.jpg" alt="Logo" class="nav-logo-img">
     </div>
+    <div class="nav-center">
+      <span class="nav-eyebrow">Fotogiornalismo ◦ Reportage ◦ Umanità</span>
+    </div>
+    <div class="nav-right">
+      <button id="btn-manage" title="Gestione">
+        <i class="fas fa-circle-user"></i>
+      </button>
+    </div>
+  </nav>
 
-    <!-- Pulsante gestione nel footer -->
-    <div style="text-align: center; margin-top: 60px; padding-bottom: 40px; border-top: 1px solid #eee;">
-        <button id="btn-manage"
-            style="background:rgba(0,0,0,0.05); border:1px solid #ccc; color:#666; padding: 10px 20px; border-radius: 30px; cursor:pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s ease;"
-            title="Gestione">
-            <i class="fas fa-cog"></i>
-            <span>Pannello Gestione</span>
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-frame-number">001</div>
+    <p class="hero-eyebrow">Fotogiornalismo ◦ Reportage ◦ Umanità</p>
+    <h1 class="hero-title"><em>A un metro</em><br>di distanza</h1>
+    <p class="hero-sub">Reportage sulla presenza umana</p>
+    <div class="hero-line"></div>
+    <p class="hero-intro">Ogni immagine è una promessa fatta a chi non ha voce. Questo spazio raccoglie storie dal margine, dove la distanza tra l'obiettivo e il volto si misura in centimetri e in anni di fiducia.</p>
+  </header>
+
+  <!-- CHI SONO -->
+  <section class="about-section">
+    <div class="about-inner">
+      <span class="section-mono">Chi sono</span>
+      <p class="about-text">Mi chiamo Luciano e sono un appassionato di fotografia. Mi piace raccontare storie cercando di catturare l'essenza della presenza umana nel mondo che ci circonda.</p>
+    </div>
+  </section>
+
+  <!-- REPORTAGE -->
+  <div class="section-header">
+    <span class="section-label">Reportage</span>
+    <div class="section-line"></div>
+    <span class="section-label" id="post-count">—</span>
+  </div>
+
+  <main id="reportage-container">
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Caricamento reportage...</span>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <span class="footer-brand">A un metro di distanza</span>
+    <span class="footer-copy">© 2024 Luciano — Tutti i diritti riservati</span>
+  </footer>
+
+  <!-- FAB aggiungi reportage (solo admin) -->
+  <button id="btn-add-reportage" class="fab hidden" title="Aggiungi Reportage">
+    <i class="fas fa-plus"></i>
+    <span>Nuovo reportage</span>
+  </button>
+
+  <!-- MODALE GESTIONE (login) -->
+  <div id="modal-manage" class="modal-overlay hidden">
+    <div class="modal-box">
+      <button class="modal-close" id="close-manage"><i class="fas fa-times"></i></button>
+      <p class="modal-mono">Accesso riservato</p>
+      <h3 class="modal-title">Pannello gestione</h3>
+      <input type="password" id="key-input" placeholder="Chiave di accesso" autocomplete="current-password">
+      <button id="btn-manage-submit" class="btn-primary">Entra</button>
+    </div>
+  </div>
+
+  <!-- MODALE AGGIUNGI REPORTAGE -->
+  <div id="modal-add-reportage" class="modal-overlay hidden">
+    <div class="modal-box modal-large">
+      <button class="modal-close" id="close-add"><i class="fas fa-times"></i></button>
+      <p class="modal-mono">Admin</p>
+      <h3 class="modal-title">Nuovo Reportage</h3>
+      <form id="form-add-reportage">
+        <div class="form-group">
+          <label>Foto <span class="form-hint">(puoi selezionare più file)</span></label>
+          <input type="file" id="rep-images" accept="image/*" multiple required>
+          <div id="image-preview" class="image-preview-area">
+            <span>Nessuna foto selezionata</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descrizione</label>
+          <textarea id="rep-desc" rows="4" placeholder="Descrivi il reportage..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Perché ho scattato queste foto</label>
+          <textarea id="rep-why" rows="3" placeholder="La storia dietro agli scatti..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="rep-date" required>
+          </div>
+          <div class="form-group">
+            <label>Luogo e Evento</label>
+            <input type="text" id="rep-location" placeholder="Es. Roma, Manifestazione" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dati tecnici <span class="form-hint">(opzionale)</span></label>
+          <input type="text" id="rep-meta" placeholder="Es. f/2.8 ◦ 1/125s ◦ ISO 1600">
+        </div>
+        <button type="submit" class="btn-primary" id="btn-submit-rep">
+          <i class="fas fa-cloud-upload-alt"></i> Pubblica
         </button>
-        <p style="font-size: 0.8rem; color: #999; margin-top: 10px;">&copy; 2026 Diario di un fotoreporter</p>
+      </form>
     </div>
+  </div>
 
-    <!-- Bottone fisso per aggiungere un nuovo reportage (Nascosto di default) -->
-    <button id="btn-add-reportage" class="floating-action-button hidden" title="Aggiungi Reportage">
-        <i class="fas fa-plus"></i> Aggiungi Reportage
-    </button>
-
-    <!-- Modale per l'aggiunta di un nuovo reportage -->
-    <div id="modal-add-reportage" class="modal-overlay hidden">
-        <div class="modal-content glass-panel">
-            <span class="close-modal">&times;</span>
-            <h2>Nuovo Reportage</h2>
-            <form id="form-add-reportage">
-                <!-- Immagini -->
-                <div class="form-group">
-                    <label for="rep-images">Foto (Puoi selezionare più file)</label>
-                    <input type="file" id="rep-images" accept="image/*" multiple required>
-                    <div id="image-preview" class="image-preview-area">
-                        <span>Nessuna foto selezionata</span>
-                    </div>
-                </div>
-
-                <!-- Descrizione -->
-                <div class="form-group">
-                    <label for="rep-desc">Descrizione</label>
-                    <textarea id="rep-desc" rows="4" placeholder="Inserisci la descrizione del reportage..."
-                        required></textarea>
-                </div>
-
-                <!-- Meta Info -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="rep-date">Data</label>
-                        <input type="date" id="rep-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rep-location">Luogo e Evento</label>
-                        <input type="text" id="rep-location" placeholder="Es. Roma, Manifestazione" required>
-                    </div>
-                </div>
-
-                <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Aggiungi</button>
-            </form>
+  <!-- MODALE LIGHTBOX -->
+  <div id="modal-lightbox" class="modal-overlay hidden" id="lightbox">
+    <div class="lightbox-container">
+      <button class="lightbox-close" id="close-lightbox"><i class="fas fa-times"></i></button>
+      <button class="lightbox-nav lightbox-prev" id="prev-lightbox"><i class="fas fa-chevron-left"></i></button>
+      <div class="lightbox-content">
+        <img id="lightbox-img" src="" alt="Foto ingrandita">
+        <div class="lightbox-info">
+          <p class="lightbox-meta" id="lightbox-meta"></p>
+          <p class="lightbox-why" id="lightbox-why-text"></p>
+          <p class="lightbox-index" id="lightbox-index"></p>
         </div>
+      </div>
+      <button class="lightbox-nav lightbox-next" id="next-lightbox"><i class="fas fa-chevron-right"></i></button>
     </div>
+  </div>
 
-    <!-- Modale Gestione -->
-    <div id="modal-manage" class="modal-overlay hidden">
-        <div class="modal-content glass-panel" style="max-width: 360px; text-align: center;">
-            <span class="close-admin-modal"
-                style="float: right; cursor: pointer; font-size: 1.5rem; line-height: 1;">&times;</span>
-            <h3 style="margin-bottom: 20px; color: #333;"><i class="fas fa-cog" style="margin-right: 8px;"></i>Gestione
-            </h3>
-            <input type="password" id="key-input" placeholder="Chiave di accesso"
-                style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 1rem; box-sizing: border-box;">
-            <button id="btn-manage-submit" class="submit-btn" style="width: 100%;">Entra</button>
-        </div>
-    </div>
-
-    <!-- Modale Lightbox per lo Zoom delle foto -->
-    <div id="modal-lightbox" class="modal-overlay hidden">
-        <div class="lightbox-container">
-            <span class="close-lightbox">&times;</span>
-            <span class="nav-lightbox prev-lightbox">&lt;</span>
-            <img id="lightbox-img" src="" alt="Zoom Foto">
-            <span class="nav-lightbox next-lightbox">&gt;</span>
-        </div>
-    </div>
-
-    <!-- Firebase compat SDK (funziona even con doppio clic su file) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
-
-    <script src="script.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+  <script src="script.js"></script>
 </body>
-
 </html>
